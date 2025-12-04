@@ -53,7 +53,8 @@ class TrainService:
         self.path: list[TrainStation] = []
 
 
-def load() -> list[TrainService]:
+# 加载数据（返回必要数据，主要是车次信息）
+def load() -> dict[str, any]:
     # 列车停站股道字典：车站ID -> 停站股道列表
     fname = "data/列车停站股道.csv"
     data = pd.read_csv(fname, header=0)
