@@ -3,14 +3,28 @@ import pandas as pd
 from dataclasses import dataclass
 
 # 标尺信息
+# @dataclass
+# class RunRuler:
+#     runtime_up: int = 0
+#     start_up: int = 0
+#     stop_up: int = 0
+#     runtime_down: int = 0
+#     start_down: int = 0
+#     stop_down: int = 0
+
+# 使用标尺信息
 @dataclass
 class RunRuler:
-    runtime_up: int = 0
-    start_up: int = 0
-    stop_up: int = 0
-    runtime_down: int = 0
-    start_down: int = 0
-    stop_down: int = 0
+    # 区间行别: 上行、下行
+    type: str = None
+    # 运行时间
+    runtime: int = 0
+    # 启动时间
+    start: int = 0
+    # 停站时间
+    stop: int = 0
+    # 区间性质：单线、双线
+    property: str = None
 
 # 车站信息
 @dataclass
@@ -23,6 +37,8 @@ class TrainStation:
     stop_time_range: tuple[int, int] = (0, 0)
     # 停站策略：必停、选停、禁停
     stop_strategy: str = None
+    # 是否是理想停站
+    is_ideal_stop: bool = False
 
 # 车次信息
 class TrainService:
@@ -59,6 +75,16 @@ def load() -> list[TrainService]:
         if (tid, sid) not in pass_tracks:
             pass_tracks[(tid, sid)] = gudao
 
+    fname = "data/区间.csv"
+    data = pd.read_csv(fname, header=0)
+    qujian: dict[tuple[int, int], tuple[str, str]] = {}
+
+    for idx, row in data.iterrows():
+        sr = row['区间名称'].split('-')
+        sr0 = int(sr[0].strip('站'))
+        sr1 = int(sr[1].strip('站'))
+        qujian[(sr0, sr1)] = (row['区间行别'], row['区间性质'])
+
     # 运行标尺信息
     # 通过标尺ID索引：(标尺名称, 区间), e.g., 运行标尺360,站4950-站738
     #   tuple[int, int, int] = (-1, -1, -1)
@@ -70,19 +96,20 @@ def load() -> list[TrainService]:
         sr = row['区间名称'].split('-')
         sr0 = int(sr[0].strip('站'))
         sr1 = int(sr[1].strip('站'))
+        type, property = qujian[(sr0, sr1)]
         run_ruler[(int(name), sr0, sr1)] = RunRuler(
-            runtime_up=int(row['运行时分（上行）']),
-            start_up=int(row['起车附加（上行）']),
-            stop_up=int(row['停车附加（上行）']),
-            runtime_down=int(row['运行时分（下行）']),
-            start_down=int(row['起车附加（下行）']),
-            stop_down=int(row['停车附加（下行）']),
+            type=type,
+            property=property,
+            runtime=int(row['运行时分（上行）']) if type == '上行' else int(row['运行时分（下行）']),
+            start=int(row['起车附加（上行）']) if type == '上行' else int(row['起车附加（下行）']),
+            stop=int(row['停车附加（上行）']) if type == '上行' else int(row['停车附加（下行）']),
         )
 
     # 车次信息
     fname = "data/列车.csv"
     data = pd.read_csv(fname, header=0)
     checi: dict[int, TrainService] = {}
+
     ts = None
     for idx, row in data.iterrows():
         # print(f"xuhao: {int(row['列车序号'])}")
@@ -106,19 +133,21 @@ def load() -> list[TrainService]:
         try:
             rid = int(row['运行标尺'].strip('运行标尺'))
             tmp = row['区间名称'].split('-')
-            ruler_info = run_ruler[(
+            ruler_info_in_use = run_ruler[(
                 rid,
                 int(tmp[0].strip('站')),
                 int(tmp[1].strip('站'))
             )]
+
         except:
-            ruler_info = None
+            ruler_info_in_use = None
         ts.path.append(
             TrainStation(
                 id=int(row['车站名称'].strip('站')),
-                ruler_info=ruler_info,
+                ruler_info=ruler_info_in_use,
                 stop_time_range=(int(sr[0]), int(sr[1])),
                 stop_strategy=row['停站要求'],
+                is_ideal_stop=(row['理想停站'] == "是")
             )
         )
 
