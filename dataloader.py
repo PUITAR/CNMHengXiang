@@ -25,16 +25,16 @@ class TrainStation:
     stop_strategy: str = None
 
 # 车次信息
-# @dataclass
-class TrainService: 
-    # 车次ID
-    id: int = -1
-    # 理想发车时间
-    ideally_time_setoff: int = 0
-    # 理想到达时间
-    ideally_time_achieve: int = 0
-    # 车次途径站点路径
-    path: list[TrainStation] = []
+class TrainService:
+    def __init__(self) -> None:
+        # 车次ID
+        self.id: int = -1
+        # 理想发车时间
+        self.ideally_time_setoff: int = 0
+        # 理想到达时间
+        self.ideally_time_achieve: int = 0
+        # 车次途径站路径
+        self.path: list[TrainStation] = []
 
 
 def load() -> list[TrainService]:
@@ -85,8 +85,11 @@ def load() -> list[TrainService]:
     checi: dict[int, TrainService] = {}
     ts = None
     for idx, row in data.iterrows():
+        # print(f"xuhao: {int(row['列车序号'])}")
         if ts is None or ts.id != int(row['列车序号']):
+            # print(int(row['列车序号']), ts.id if ts else None)
             if ts is not None:
+                # print(len(ts.path))
                 checi[ts.id] = ts
             ts = TrainService()
             # 车次ID
