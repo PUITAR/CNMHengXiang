@@ -4,22 +4,25 @@
   - `"列车停站股道"`: `dict[int, list[str]]`
   - `"列车通过股道"`: `dict[tuple[int, int], str]`
   - `"运行标尺"`: `dict[tuple[int, int, int], RunRuler]`
-- 代码位置：`dataloader.py:40` 定义 `load()`；字典的构造与返回在 `dataloader.py:125-130`。
+ - 代码位置：`dataloader.py:56` 定义 `load()`；字典的构造与返回在 `dataloader.py:157-162`。
 
 **数据结构**
-- `TrainService`（`dataloader.py:29-37`）
-  - `id`: 车次 ID（`int`）
-  - `ideally_time_setoff`: 理想出发时间（`int` 秒）
-  - `ideally_time_achieve`: 理想到达时间（`int` 秒）
-  - `path`: 该车次途径的站点列表（`list[TrainStation]`）
-- `TrainStation`（`dataloader.py:17-26`）
-  - `id`: 车站 ID（如 CSV 的 `车站名称`/`车站` 中的编号，已去掉“站”前缀）（`int`）
-  - `ruler_info`: 该站关联的运行标尺（`RunRuler` 或 `None`，见下）
-  - `stop_time_range`: 停站时间范围（`tuple[int, int]`）
-  - `stop_strategy`: 停站策略（`str`，如“必停/选停/禁停”等）
-- `RunRuler`（`dataloader.py:7-13`）
-  - `runtime_up`, `start_up`, `stop_up`
-  - `runtime_down`, `start_down`, `stop_down`
+ - `TrainService`（`dataloader.py:44-53`）
+    - `id`: 车次 ID（`int`）
+    - `ideally_time_setoff`: 理想出发时间（`int` 秒）
+    - `ideally_time_achieve`: 理想到达时间（`int` 秒）
+    - `path`: 该车次途径的站点列表（`list[TrainStation]`）
+ - `TrainStation`（`dataloader.py:31-42`）
+    - `id`: 车站 ID（如 CSV 的 `车站名称`/`车站` 中的编号，已去掉“站”前缀）（`int`）
+    - `ruler_info`: 该站关联的运行标尺（`RunRuler` 或 `None`，见下）
+    - `stop_time_range`: 停站时间范围（`tuple[int, int]`）
+    - `stop_strategy`: 停站策略（`str`，如“必停/选停/禁停”等）
+ - `RunRuler`（`dataloader.py:17-28`）
+    - `type`: 区间行别（`"上行"` 或 `"下行"`）
+    - `runtime`: 运行时间
+    - `start`: 起车附加
+    - `stop`: 停车附加
+    - `property`: 区间性质（`"单线"`、`"双线"`）
 
 **快速上手**
 ```python
@@ -38,13 +41,14 @@ for tid, ts in checi.items():
     for st in ts.path:
         print('站点ID', st.id,
               '停站策略', st.stop_strategy,
-              '停站范围', st.stop_time_range)
+              '停站范围', st.stop_time_range,
+              '理想停站', st.is_ideal_stop)
 
-        # 如有运行标尺，读取上下行参数
+        # 如有运行标尺，读取行别、性质与参数
         if st.ruler_info is not None:
             r = st.ruler_info
-            print('上行(运行/起车附加/停车附加):', r.runtime_up, r.start_up, r.stop_up)
-            print('下行(运行/起车附加/停车附加):', r.runtime_down, r.start_down, r.stop_down)
+            print('行别:', r.type, '性质:', r.property,
+                  '参数(运行/起车附加/停车附加):', r.runtime, r.start, r.stop)
 ```
 
 **查询股道数据**
@@ -69,13 +73,22 @@ print('车次', tid, '站', station_id, '通过股道:', track)
 for ts in info['车次信息'].values():
     for st in ts.path:
         if st.ruler_info:
-            print('站', st.id, '标尺上行运行时分:', st.ruler_info.runtime_up)
+            print('站', st.id,
+                  '行别:', st.ruler_info.type,
+                  '性质:', st.ruler_info.property,
+                  '运行时分:', st.ruler_info.runtime)
 ```
 - 或使用标尺索引字典：键为 `(标尺编号, 运行区间左端点, 运行区间右端点)`，如 `(360, 4950, 738)`（`dataloader.py:63-80` 构建）：
-```python
+```
 run_ruler = info['运行标尺']
 rid, s0, s1 = 360, 4950, 738
 rr = run_ruler.get((rid, s0, s1))
 if rr:
-    print('运行标尺', rid, '上行运行时分:', rr.runtime_up)
+    print('运行标尺', rid,
+          '行别:', rr.type,
+          '性质:', rr.property,
+          '运行时分:', rr.runtime,
+          '起车附加:', rr.start,
+          '停车附加:', rr.stop)
 ```
+
