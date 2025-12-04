@@ -55,15 +55,16 @@ class TrainService:
 
 # 加载数据（返回必要数据，主要是车次信息）
 def load() -> dict[str, any]:
-    # 列车停站股道字典：车站ID -> 停站股道列表
+    # 列车停站股道字典：(车次ID, 车站ID) -> 停站股道列表
     fname = "data/列车停站股道.csv"
     data = pd.read_csv(fname, header=0)
-    stop_tracks: dict[int, list[str]] = {}
+    stop_tracks: dict[tuple[int,int], list[str]] = {}
     for idx, row in data.iterrows():
+        tid = int(row['列车序号'])
         sid = int(row['车站'].strip('站'))
         gudao = str(row['股道集合']).strip('\"').split(',')
-        if sid not in stop_tracks:
-            stop_tracks[sid] = gudao
+        if (tid, sid) not in stop_tracks:
+            stop_tracks[(tid, sid)] = gudao
 
     # 列车通过股道字典：(车次ID, 车站ID) -> 股道ID
     fname = "data/列车通过股道.csv"
