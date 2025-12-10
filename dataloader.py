@@ -76,7 +76,17 @@ def load() -> dict[str, any]:
         gudao = row['股道集合']
         if (tid, sid) not in pass_tracks:
             pass_tracks[(tid, sid)] = gudao
-
+    
+    fname = "data/股道.csv"
+    data = pd.read_csv(fname, header=0)
+    tracks: dict[int, list[str]] = {}
+    for idx, row in data.iterrows():
+        sid = int(row['车站名称'].strip('站'))
+        gudao = row['股道名称']
+        if sid not in tracks:
+            tracks[sid] = []
+        tracks[sid].append(gudao)
+            
     fname = "data/区间.csv"
     data = pd.read_csv(fname, header=0)
     qujian: dict[tuple[int, int], tuple[str, str]] = {}
@@ -156,11 +166,50 @@ def load() -> dict[str, any]:
     if ts is not None:
         checi[ts.id] = ts
 
+    # 交路信息 前车id -> (后车id，站次，最小候车时间，最大候车时间)
+    fname = "data/交路.csv"
+    data = pd.read_csv(fname, header=0)
+    exchanges : dict[int, (int, int, int, int)] = {}
+    for idx, exchange in data.iterrows():
+        prev_ts_id = int(exchange['前车序号'])
+        next_ts_id = int(exchange['后车序号'])
+        station_id = int(exchange['接续车站'].strip('站'))
+        min_exchange_time = int(exchange['最小接续时间'])
+        max_exchange_time = int(exchange['最大接续时间'])
+        exchanges[prev_ts_id] = (next_ts_id, station_id, min_exchange_time, max_exchange_time)
+    
+    fname = "data/进路.csv"
+    data = pd.read_csv(fname, header=0)
+    entrances : dict[(int, int, int, str), int] = {}
+    for idx, row in data.iterrows():
+        eid = int(row['进路序号'])
+        curr_sid = int(row['车站名称'].strip('站'))
+        sr = row['区间名称'].split('-')
+        sr1 = int(sr[0].strip('站'))
+        sr2 = int(sr[1].strip('站'))
+        prev_sid = sr1 if curr_sid == sr2 else sr2
+        track = row['股道名称']
+        track_class = row['作业类型']
+        entrances[(curr_sid, prev_sid, track, track_class)] = eid
+
+    fname = "data/间隔时间.csv"
+    data = pd.read_csv(fname, header = 0)
+    min_time_gaps : dict[(int, int), int] = {}
+    for idx, row in data.iterrows():
+        eid1 = int(row['前车进路序号'])
+        eid2 = int(row['后车进路序号'])
+        min_time_gap = int(row['最小间隔时间'])
+        min_time_gaps[(eid1, eid2)] = min_time_gap
+
     return {
+        '车站股道': tracks,
         '列车停站股道': stop_tracks,
         '列车通过股道': pass_tracks,
         '运行标尺': run_ruler,
         '车次信息': checi,
+        '交路信息': exchanges,
+        '进路信息': entrances,
+        '间隔时间': min_time_gaps,
     }
 
 
